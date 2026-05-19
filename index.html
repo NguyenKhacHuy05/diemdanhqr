@@ -1,0 +1,679 @@
+<<<<<<< HEAD
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống điểm danh hội thảo</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <img src="img/logo-husc.png" class="logo">
+
+        <div class="header-text">
+            <h1>HỆ THỐNG ĐIỂM DANH HỘI THẢO</h1>
+
+            <h2 id="headerEventName">Kỹ nghệ phần mềm</h2>
+            <p id="headerEventTime">07:00 - 10:00 | 23/05/2026</p>
+            <p id="headerEventLocation">Trường Đại học Khoa học Huế</p>
+
+            <div class="event-status">
+                <span id="headerCheckinBadge" class="badge open">
+                    Đang mở Check-in
+                </span>
+            </div>
+        </div>
+    </div>
+</header>
+
+<nav class="top-menu hidden" id="roleMenu"></nav>
+
+<section id="loginSection" class="card center">
+    <h2>Chọn vai trò người dùng</h2>
+    <p class="login-desc">
+        Vui lòng chọn vai trò để truy cập hệ thống điểm danh hội thảo
+    </p>
+
+    <select id="role">
+        <option value="participant">Người tham dự</option>
+        <option value="staff">Nhân viên hỗ trợ</option>
+        <option value="organizer">Ban tổ chức</option>
+    </select>
+
+    <button onclick="login()">Truy cập hệ thống</button>
+</section>
+
+<div id="dashboard" class="hidden">
+
+    <!-- Participant -->
+    <section id="participantPanel" class="hidden container">
+        <div class="card">
+            <h3>Đăng ký tham gia</h3>
+            <input type="text" id="name" placeholder="Họ tên">
+            <input type="email" id="email" placeholder="Email">
+            <button onclick="register()">Đăng ký</button>
+        </div>
+
+        <div class="card">
+            <h3>QR Code cá nhân</h3>
+            <canvas id="qrcode"></canvas>
+            <p>Xuất trình QR cho nhân viên hỗ trợ để điểm danh</p>
+        </div>
+    </section>
+
+    <!-- Staff -->
+    <section id="staffPanel" class="hidden container">
+        <div class="card">
+            <h3>Quét QR người tham dự</h3>
+
+            <div id="readerPlaceholder" class="scanner-placeholder" onclick="startScanner()">
+                Nhấn để bắt đầu quét QR
+            </div>
+
+            <div id="reader" class="hidden"></div>
+        </div>
+
+        <div class="card">
+            <h3>Kết quả xác nhận</h3>
+            <p id="scanResult">Chưa có dữ liệu</p>
+        </div>
+    </section>
+
+    <!-- Organizer -->
+    <section id="organizerPanel" class="hidden container">
+
+        <div class="card" id="stats">
+            <h3>Thống kê điểm danh</h3>
+
+            <p>Tổng đăng ký: <span id="total">0</span></p>
+            <p>Đã điểm danh: <span id="checked">0</span></p>
+            <p>Vắng mặt: <span id="absent">0</span></p>
+
+            <div class="progress-container">
+                <div id="progressBar" class="progress-bar"></div>
+            </div>
+
+            <p class="progress-text">
+                Tỷ lệ tham dự: <span id="attendanceRate">0%</span>
+            </p>
+        </div>
+
+        <div class="card">
+            <h3>Thông tin hội thảo</h3>
+
+            <input type="text" id="eventName" value="Kỹ nghệ phần mềm">
+            <input type="text" id="eventTime" value="07:00 - 10:00">
+            <input type="text" id="eventDate" value="23/05/2026">
+            <input type="text" id="eventLocation" value="Trường Đại học Khoa học Huế">
+            <input type="number" id="eventCapacity" value="200">
+
+            <button onclick="saveEventInfo()">Lưu thông tin</button>
+        </div>
+
+        <div class="card">
+            <h3>Check-in gần đây</h3>
+
+            <p id="checkinStatus" class="status-open">Đang mở check-in</p>
+            <button onclick="toggleCheckin()">Đóng / Mở Check-in</button>
+
+            <ul id="recentLogs"></ul>
+        </div>
+
+        <div class="card full" id="participants">
+            <h3>Danh sách người tham dự</h3>
+
+            <input type="text" id="searchInput"
+                   placeholder="Tìm kiếm..."
+                   onkeyup="searchParticipant()">
+
+            <select onchange="filterParticipants(this.value)">
+                <option value="all">Tất cả</option>
+                <option value="checked">Đã điểm danh</option>
+                <option value="unchecked">Chưa điểm danh</option>
+            </select>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Họ tên</th>
+                        <th>Email</th>
+                        <th>Trạng thái</th>
+                        <th>Thời gian</th>
+                    </tr>
+                </thead>
+                <tbody id="list"></tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<footer id="contact">
+    <h3>Liên hệ Ban tổ chức</h3>
+    <p>Email: hotrohoithao@husc.edu.vn</p>
+    <p>Hotline: 0901 234 567</p>
+    <p>Địa chỉ: Trường Đại học Khoa học Huế</p>
+</footer>
+
+<script>
+let participants = JSON.parse(localStorage.getItem("participants")) || [];
+let checkinOpen = true;
+
+function saveData(){
+    localStorage.setItem("participants", JSON.stringify(participants));
+    renderTable();
+    updateStats();
+}
+
+function login(){
+    let role = document.getElementById("role").value;
+
+    renderMenu(role);
+
+    loginSection.classList.add("hidden");
+    dashboard.classList.remove("hidden");
+
+    participantPanel.classList.add("hidden");
+    staffPanel.classList.add("hidden");
+    organizerPanel.classList.add("hidden");
+
+    if(role==="participant") participantPanel.classList.remove("hidden");
+    if(role==="staff") staffPanel.classList.remove("hidden");
+    if(role==="organizer"){
+        organizerPanel.classList.remove("hidden");
+        renderTable();
+        updateStats();
+    }
+}
+
+function renderMenu(role){
+    let menu = document.getElementById("roleMenu");
+    menu.classList.remove("hidden");
+
+    if(role==="participant"){
+        menu.innerHTML=`
+            <a href="#" onclick="goHome()">🏠 Trang chủ</a>
+            <a href="#participantPanel">📝 Đăng ký</a>
+            <a href="#contact">📞 Liên hệ</a>
+        `;
+    }
+
+    if(role==="staff"){
+        menu.innerHTML=`
+            <a href="#" onclick="goHome()">🏠 Trang chủ</a>
+            <a href="#staffPanel">📷 Quét QR</a>
+            <a href="#contact">📞 Liên hệ</a>
+        `;
+    }
+
+    if(role==="organizer"){
+        menu.innerHTML=`
+            <a href="#" onclick="goHome()">🏠 Trang chủ</a>
+            <a href="#stats">📊 Thống kê</a>
+            <a href="#participants">👥 Người tham dự</a>
+            <a href="#contact">📞 Liên hệ</a>
+        `;
+    }
+}
+
+function goHome(){
+    dashboard.classList.add("hidden");
+    loginSection.classList.remove("hidden");
+    roleMenu.classList.add("hidden");
+
+    participantPanel.classList.add("hidden");
+    staffPanel.classList.add("hidden");
+    organizerPanel.classList.add("hidden");
+
+    window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function register(){
+    let name = document.getElementById("name").value;
+    let email = document.getElementById("email").value;
+
+    let capacity = Number(document.getElementById("eventCapacity").value);
+
+    if(participants.length >= capacity){
+        alert("Đã đủ số lượng đăng ký");
+        return;
+    }
+
+    participants.push({
+        name,email,
+        checkedIn:false,
+        time:"--"
+    });
+
+    saveData();
+    QRCode.toCanvas(document.getElementById("qrcode"), email);
+}
+
+function startScanner(){
+    readerPlaceholder.classList.add("hidden");
+    reader.classList.remove("hidden");
+
+    let scanner = new Html5QrcodeScanner("reader",{fps:10,qrbox:250});
+    scanner.render(onScanSuccess);
+}
+
+function onScanSuccess(decodedText){
+
+    if(!checkinOpen){
+        scanResult.innerHTML = "Check-in hiện đã đóng";
+        return;
+    }
+
+    let user = participants.find(x=>x.email===decodedText);
+
+    if(!user){
+        scanResult.innerHTML = "QR không hợp lệ";
+        return;
+    }
+
+    if(user.checkedIn){
+        scanResult.innerHTML = "Đã điểm danh trước đó";
+        return;
+    }
+
+    user.checkedIn = true;
+    user.time = new Date().toLocaleTimeString();
+
+    saveData();
+
+    scanResult.innerHTML = "Điểm danh thành công: " + user.name;
+
+    recentLogs.innerHTML =
+        `<li>${user.name} - ${user.time}</li>` + recentLogs.innerHTML;
+}
+
+function renderTable(){
+    list.innerHTML="";
+
+    participants.forEach(user=>{
+        list.innerHTML += `
+        <tr>
+            <td>${user.name}</td>
+            <td>${user.email}</td>
+            <td>${user.checkedIn ? "Đã điểm danh":"Chưa đến"}</td>
+            <td>${user.time}</td>
+        </tr>`;
+    });
+}
+
+function updateStats(){
+    let total = participants.length;
+    let checked = participants.filter(x=>x.checkedIn).length;
+    let absent = total - checked;
+
+    totalSpan("total",total);
+    totalSpan("checked",checked);
+    totalSpan("absent",absent);
+
+    let rate = total===0 ? 0 : Math.round((checked/total)*100);
+    attendanceRate.innerText = rate + "%";
+    progressBar.style.width = rate + "%";
+}
+
+function totalSpan(id,val){
+    document.getElementById(id).innerText = val;
+}
+
+function toggleCheckin(){
+    checkinOpen = !checkinOpen;
+
+    let status = document.getElementById("checkinStatus");
+    let badge = document.getElementById("headerCheckinBadge");
+
+    if(checkinOpen){
+        status.innerText = "Đang mở check-in";
+        status.className = "status-open";
+
+        badge.innerText = "Đang mở Check-in";
+        badge.className = "badge open";
+    }
+    else{
+        status.innerText = "Đã đóng check-in";
+        status.className = "status-close";
+
+        badge.innerText = "Đã đóng Check-in";
+        badge.className = "badge close";
+    }
+}
+
+function saveEventInfo(){
+    let eventInfo = {
+        name:eventName.value,
+        time:eventTime.value,
+        date:eventDate.value,
+        location:eventLocation.value
+    };
+
+    localStorage.setItem("eventInfo", JSON.stringify(eventInfo));
+
+    headerEventName.innerText = eventInfo.name;
+    headerEventTime.innerText = eventInfo.time + " | " + eventInfo.date;
+    headerEventLocation.innerText = eventInfo.location;
+}
+
+function loadEventInfo(){
+    let saved = JSON.parse(localStorage.getItem("eventInfo"));
+    if(!saved) return;
+
+    headerEventName.innerText = saved.name;
+    headerEventTime.innerText = saved.time + " | " + saved.date;
+    headerEventLocation.innerText = saved.location;
+}
+
+loadEventInfo();
+</script>
+
+</body>
+=======
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#005bea">
+
+    <title>Hệ thống điểm danh hội thảo</title>
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <img src="img/logo-husc.png" alt="Logo HUSC" class="logo">
+
+        <div class="header-text">
+            <h1>HỆ THỐNG ĐIỂM DANH HỘI THẢO</h1>
+            <h2>Kỹ nghệ phần mềm</h2>
+            <p>07:00 - 10:00 | 23/05/2026</p>
+            <p>Trường Đại học Khoa học Huế</p>
+        </div>
+    </div>
+</header>
+
+<nav class="top-menu hidden" id="roleMenu"></nav>
+
+<section id="loginSection" class="card center">
+    <h3>Đăng nhập hệ thống</h3>
+
+    <input type="text" id="username" placeholder="Tên đăng nhập">
+
+    <select id="role">
+        <option value="participant">Người tham dự</option>
+        <option value="staff">Nhân viên hỗ trợ</option>
+        <option value="organizer">Ban tổ chức</option>
+    </select>
+
+    <button onclick="login()">Đăng nhập</button>
+</section>
+
+<div id="dashboard" class="hidden">
+
+    <!-- Participant -->
+    <section id="participantPanel" class="hidden container">
+        <div class="card">
+            <h3>Đăng ký tham gia</h3>
+            <input type="text" id="name" placeholder="Họ tên">
+            <input type="email" id="email" placeholder="Email">
+            <button onclick="register()">Đăng ký</button>
+        </div>
+
+        <div class="card">
+            <h3>QR Code cá nhân</h3>
+            <canvas id="qrcode"></canvas>
+            <p>Xuất trình QR cho nhân viên hỗ trợ để điểm danh</p>
+        </div>
+    </section>
+
+    <!-- Staff -->
+    <section id="staffPanel" class="hidden container">
+        <div class="card">
+            <h3>Quét QR người tham dự</h3>
+
+            <div id="readerPlaceholder" class="scanner-placeholder" onclick="startScanner()">
+                Nhấn để bắt đầu quét QR
+            </div>
+
+            <div id="reader" class="scanner-box hidden"></div>
+        </div>
+
+        <div class="card">
+            <h3>Kết quả xác nhận</h3>
+            <p id="scanResult">Chưa có dữ liệu</p>
+        </div>
+    </section>
+
+    <!-- Organizer -->
+    <section id="organizerPanel" class="hidden container">
+        <div class="card" id="stats">
+            <h3>Theo dõi điểm danh</h3>
+            <p>Tổng đăng ký: <span id="total">0</span></p>
+            <p>Đã điểm danh: <span id="checked">0</span></p>
+            <p>Vắng mặt: <span id="absent">0</span></p>
+        </div>
+
+        <div class="card" id="management">
+            <h3>Thông tin hội thảo</h3>
+            <p><strong>Tên hội thảo:</strong> Kỹ nghệ phần mềm</p>
+            <p><strong>Thời gian:</strong> 07:00 - 10:00</p>
+            <p><strong>Ngày tổ chức:</strong> 23/05/2026</p>
+            <p><strong>Địa điểm:</strong> Trường Đại học Khoa học Huế</p>
+            <p><strong>Sức chứa:</strong> 200 người</p>
+            <p><strong>Trạng thái:</strong>
+                <span class="status-open">Đang mở đăng ký</span>
+            </p>
+        </div>
+
+        <div class="card full" id="participants">
+            <h3>Danh sách người tham dự</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Họ tên</th>
+                        <th>Email</th>
+                        <th>Trạng thái</th>
+                        <th>Thời gian</th>
+                    </tr>
+                </thead>
+                <tbody id="list"></tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<footer id="contact">
+    <div class="footer-content">
+        <h3>Liên hệ Ban tổ chức</h3>
+        <p>Email: hotrohoithao@husc.edu.vn</p>
+        <p>Hotline: 0901 234 567</p>
+        <p>Địa chỉ: Trường Đại học Khoa học Huế, 77 Nguyễn Huệ, TP. Huế</p>
+    </div>
+</footer>
+
+<script>
+let participants = JSON.parse(localStorage.getItem("participants")) || [];
+
+function saveData() {
+    localStorage.setItem("participants", JSON.stringify(participants));
+    renderTable();
+    updateStats();
+}
+
+function renderMenu(role) {
+    const menu = document.getElementById("roleMenu");
+    menu.classList.remove("hidden");
+
+    let menuItems = "";
+
+    if (role === "participant") {
+        menuItems = `
+            <a href="#" onclick="goHome()">Trang chủ</a>
+            <a href="#participantPanel">Đăng ký</a>
+            <a href="#participantPanel">QR cá nhân</a>
+            <a href="#contact">Liên hệ</a>
+        `;
+    }
+
+    if (role === "staff") {
+        menuItems = `
+            <a href="#" onclick="goHome()">Trang chủ</a>
+            <a href="#staffPanel">Quét QR</a>
+            <a href="#staffPanel">Kết quả</a>
+            <a href="#contact">Liên hệ</a>
+        `;
+    }
+
+    if (role === "organizer") {
+        menuItems = `
+            <a href="#" onclick="goHome()">Trang chủ</a>
+            <a href="#stats">Thống kê</a>
+            <a href="#management">Thông tin</a>
+            <a href="#participants">Người tham dự</a>
+            <a href="#contact">Liên hệ</a>
+        `;
+    }
+
+    menu.innerHTML = menuItems;
+}
+
+function login() {
+    let role = document.getElementById("role").value;
+    renderMenu(role);
+
+    document.getElementById("loginSection").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
+
+    document.getElementById("participantPanel").classList.add("hidden");
+    document.getElementById("staffPanel").classList.add("hidden");
+    document.getElementById("organizerPanel").classList.add("hidden");
+
+    if (role === "participant") {
+        document.getElementById("participantPanel").classList.remove("hidden");
+    }
+
+    if (role === "staff") {
+        document.getElementById("staffPanel").classList.remove("hidden");
+    }
+
+    if (role === "organizer") {
+        document.getElementById("organizerPanel").classList.remove("hidden");
+        renderTable();
+        updateStats();
+    }
+}
+
+function goHome() {
+    document.getElementById("dashboard").classList.add("hidden");
+    document.getElementById("loginSection").classList.remove("hidden");
+
+    document.getElementById("participantPanel").classList.add("hidden");
+    document.getElementById("staffPanel").classList.add("hidden");
+    document.getElementById("organizerPanel").classList.add("hidden");
+
+    document.getElementById("roleMenu").classList.add("hidden");
+
+    document.getElementById("username").value = "";
+    document.getElementById("role").selectedIndex = 0;
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function register() {
+    let name = document.getElementById("name").value;
+    let email = document.getElementById("email").value;
+
+    if (!name || !email) {
+        alert("Vui lòng nhập đủ thông tin");
+        return;
+    }
+
+    let user = {
+        name,
+        email,
+        checkedIn: false,
+        time: "--"
+    };
+
+    participants.push(user);
+    saveData();
+
+    QRCode.toCanvas(document.getElementById("qrcode"), email);
+    alert("Đăng ký thành công");
+}
+
+function startScanner() {
+    document.getElementById("readerPlaceholder").classList.add("hidden");
+    document.getElementById("reader").classList.remove("hidden");
+
+    if (window.scannerStarted) return;
+    window.scannerStarted = true;
+
+    let scanner = new Html5QrcodeScanner("reader", {
+        fps: 10,
+        qrbox: 250
+    });
+
+    scanner.render(onScanSuccess);
+}
+
+function onScanSuccess(decodedText) {
+    let user = participants.find(item => item.email === decodedText);
+
+    if (user) {
+        user.checkedIn = true;
+        user.time = new Date().toLocaleTimeString();
+        saveData();
+
+        document.getElementById("scanResult").innerHTML =
+            "Điểm danh thành công: " + user.name;
+    } else {
+        document.getElementById("scanResult").innerHTML = "QR không hợp lệ";
+    }
+}
+
+function renderTable() {
+    let list = document.getElementById("list");
+    if (!list) return;
+
+    list.innerHTML = "";
+
+    participants.forEach(user => {
+        list.innerHTML += `
+        <tr>
+            <td>${user.name}</td>
+            <td>${user.email}</td>
+            <td class="${user.checkedIn ? 'success' : 'danger'}">
+                ${user.checkedIn ? 'Đã điểm danh' : 'Chưa đến'}
+            </td>
+            <td>${user.time}</td>
+        </tr>
+        `;
+    });
+}
+
+function updateStats() {
+    let total = participants.length;
+    let checked = participants.filter(user => user.checkedIn).length;
+
+    document.getElementById("total").innerText = total;
+    document.getElementById("checked").innerText = checked;
+    document.getElementById("absent").innerText = total - checked;
+}
+</script>
+
+</body>
+>>>>>>> bbdf7fc9a5b3419b4b87653ef4b1cb46f17ec678
+</html>
