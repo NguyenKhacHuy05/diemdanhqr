@@ -15,7 +15,6 @@
 <header>
     <div class="header-content">
         <img src="img/logo-husc.png" class="logo">
-
         <div class="header-text">
             <h1>HỆ THỐNG ĐIỂM DANH HỘI THẢO</h1>
 
@@ -47,6 +46,19 @@
     </select>
 
     <button onclick="login()">Truy cập hệ thống</button>
+    <div class="quick-access">
+    <h3>Truy cập nhanh bằng QR</h3>
+
+    <canvas id="websiteQR"></canvas>
+
+    <p>
+        Quét mã QR để mở nhanh hệ thống điểm danh hội thảo
+    </p>
+
+    <small>
+        https://nguyenkhachuy05.github.io/diemdanhqr
+    </small>
+</div>
 </section>
 
 <div id="dashboard" class="hidden">
@@ -371,7 +383,11 @@ function loadEventInfo(){
 }
 
 loadEventInfo();
-</script>
 
+QRCode.toCanvas(
+    document.getElementById("websiteQR"),
+    "https://nguyenkhachuy05.github.io/diemdanhqr"
+);
+</script>
 </body>
 </html>
